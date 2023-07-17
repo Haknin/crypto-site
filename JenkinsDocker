@@ -68,6 +68,7 @@ pipeline {
                             sudo yum install docker -y
                             sudo yum install git -y
                             docker-compose down
+                            echo "---------------------"
                             pwd
                             sudo rm -fr crypto-site
                             git clone https://github.com/Haknin/crypto-site.git
