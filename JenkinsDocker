@@ -67,6 +67,7 @@ pipeline {
                             ssh -o StrictHostKeyChecking=no ec2-user@$EC2_IP_PROD '
                             sudo yum install docker -y
                             sudo yum install git -y
+                            cd /home/ec2-user/crypto-site
                             docker-compose down
                             pwd
                             sudo rm -fr crypto-site
