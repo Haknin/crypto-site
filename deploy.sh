@@ -3,7 +3,7 @@
 pgrep flask
 
 if [[ "$?" == "0" ]]; then
-  pkill -9 flask
+  pkill flask
   sleep 7
   cd /home/ec2-user/crypto-site
   flask run --host=0.0.0.0
