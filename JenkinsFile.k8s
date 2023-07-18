@@ -1,0 +1,40 @@
+pipeline {
+    agent any
+    triggers {
+        pollSCM('*/5 * * * *')
+    }
+    stages {
+        stage('Cleanup') {
+            steps {
+                script {
+                    env.VM_IP = "192.168.56.102"
+                }
+                sh 'echo "Performing cleanup..."'
+                sh 'pwd'
+                sh 'rm -rf *'
+            }
+        }
+        stage('Clone') {
+            steps {
+                sh 'echo "Building..."'
+                sh 'git clone https://github.com/nedm0r/sample-flask-.git'
+                sh 'ls'
+            }
+        }
+        stage('Upload to Docker Hub') {
+            steps {
+                sh '''
+                    cd /var/lib/jenkins/workspace/Pipeline-K8S/sample-flask-/flask
+                    python3 finddockerver.py
+                    cd /var/lib/jenkins/workspace/Pipeline-K8S/sample-flask-/Mysql
+                    python3 findsqlver.py
+                '''
+            }
+        }
+        stage('Testing') {
+            steps {
+                sh 'kubectl apply -f /var/lib/jenkins/workspace/Pipeline-K8S/sample-flask-/Create-Cluster.yaml'
+            }
+        }
+    }
+}
