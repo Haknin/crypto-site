@@ -17,8 +17,17 @@ pipeline {
         stage('Clone') {
             steps {
                 sh 'echo "Building..."'
-                sh 'git clone https://github.com/nedm0r/sample-flask-.git'
+                sh 'git clonehttps://github.com/Haknin/crypto-site.git'
                 sh 'ls'
+            }
+        }
+         stage('Login to Docker Hub') {
+            steps {
+                withCredentials([
+                    usernamePassword(credentialsId: 'docker_login', usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')
+                ]) {
+                    sh "docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD"
+                }
             }
         }
         stage('Upload to Docker Hub') {
