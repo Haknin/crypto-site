@@ -6,7 +6,7 @@ def connectToServer(String ipAddress) {
                 ssh -o StrictHostKeyChecking=no -i ssh-ori109 ec2-user@$ipAddress '
                 sudo yum install docker -y
                 sudo systemctl restart docker
-                sudo docker-compose up -p 5000:5000 haknin/crypto_docker:1.${BUILD_NUMBER}
+                sudo docker-compose up -p 5000:5000 haknin/crypto_docker:latest
                 '
                 """
             }
@@ -18,8 +18,8 @@ pipeline {
     agent any
 
     environment {
-        EC2_IP_TEST = "18.158.60.91"
-        EC2_IP_PROD = "52.29.248.134"
+        EC2_IP_TEST = "35.157.57.216"
+        EC2_IP_PROD = "35.157.57.216"
     }
     stages {
 
@@ -45,10 +45,11 @@ pipeline {
         }
         stage('Build Docker Image') {
             steps {
-                sh 'docker image prune -a'
+                sh 'docker image prune -a -f'
                 sh 'docker container prune -f'
                 sh 'docker rmi \$(docker images -q) || true'
-                sh 'cd crypto-site && docker build -t haknin/crypto_docker .'
+                sh 'cd crypto-site && docker build --no-cache -t haknin/crypto_docker .'
+
             }
         }
         stage('Push to Docker Hub') {
@@ -67,15 +68,14 @@ pipeline {
                             ssh -o StrictHostKeyChecking=no ec2-user@$EC2_IP_PROD '
                             sudo yum install docker -y
                             sudo yum install git -y
-                            cd /home/ec2-user/crypto-site
-                            docker-compose down
-                            pwd
+                            cd crypto-site
+                            sudo docker-compose down
                             sudo rm -fr crypto-site
                             git clone https://github.com/Haknin/crypto-site.git
-                            docker pull haknin/crypto_docker
+                            sudo docker pull haknin/crypto_docker:latest
                             sudo systemctl restart docker
-                            sudo curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-\$(uname -s)-\$(uname -m) -o /usr/local/bin/docker-compose
-                            sudo chmod +x /usr/local/bin/docker-compose
+                            cd /home/ec2-user/crypto-site
+                            sudo curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-\$(uname -s)-\$(uname -m) -o /usr/local/bin/docker-compos
                             cd /home/ec2-user/crypto-site
                             sudo docker-compose up -d
                             '
