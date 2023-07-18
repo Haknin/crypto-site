@@ -17,7 +17,7 @@ pipeline {
         stage('Clone') {
             steps {
                 sh 'echo "Building..."'
-                sh 'git clonehttps://github.com/Haknin/crypto-site.git'
+                sh 'git clone https://github.com/Haknin/crypto-site.git'
                 sh 'ls'
             }
         }
