@@ -33,7 +33,7 @@ pipeline {
         stage('Upload to Docker Hub') {
             steps {
                 sh '''
-                    cd /var/lib/jenkins/workspace/Pipeline-K8S/sample-flask-/flask
+                    cd /var/lib/jenkins/workspace/pipe-kube/crypto-site/flask/
                     python3 finddockerver.py
                     cd /var/lib/jenkins/workspace/Pipeline-K8S/sample-flask-/Mysql
                     python3 findsqlver.py
