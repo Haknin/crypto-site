@@ -178,9 +178,14 @@
         }
 
         .visit-count {
-            text-align: center;
-            margin-top: 20px;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 5px 10px;
+            border-radius: 5px;
             font-size: 1.2rem;
+            color: white;
         }
     </style>
 </head>
@@ -203,11 +208,11 @@
                 <strong>Bitcoin</strong>
             </a>
 
-            <div class="card"></div>
-        </div>
-
-        <div class="visit-count">
-            <h2>Visit Count: {{ count }}</h2>
+            <div class="card">
+                <div class="visit-count">
+                    <h2>Visit Count: {{ count }}</h2>
+                </div>
+            </div>
         </div>
     </div>
 
