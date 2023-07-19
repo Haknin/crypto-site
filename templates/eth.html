@@ -190,10 +190,9 @@
 
         .visit-count {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(238, 233, 233, 0);
+            top: 50px;
+            left: 50px;
+            background-color: rgba(238, 233, 233, 0.8);
             padding: 5px 10px;
             border-radius: 5px;
             font-size: 1.2rem;
@@ -223,6 +222,7 @@
         </a>
 
         <div class="card"></div>
+        <div class="visit-count">Visit Count: {{ visit_count }}</div>
     </div>
   
 </body>
