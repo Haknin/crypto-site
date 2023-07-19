@@ -17,7 +17,7 @@ def eth():
     if eth_response.status_code == 200:
         eth_price = eth_response.json()["coin"]["price"]
         
-    # Pass the Bitcoin price data to the template
+    # Pass the Ethereum price data to the template
     return render_template("eth.html", eth_price=eth_price)
 
 @app.route("/btc")
@@ -28,6 +28,7 @@ def btc():
     if btc_response.status_code == 200:
         bitcoin_price = btc_response.json()["bpi"]["USD"]["rate"]
 
+    # Pass the Bitcoin price data to the template
     return render_template("btc.html", bitcoin_price=bitcoin_price)
 
 @app.route("/visit_count")
