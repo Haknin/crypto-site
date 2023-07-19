@@ -20,21 +20,20 @@
             gap: 20px;
         }
 
-        /*butten*/
         .links a {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: rgba(133, 68, 8, 0.83);
+            background: rgba(133, 68, 8, 0.83);/*butten color*/
             border-radius: 25px;
             padding: 10px;
             font-size: 1.2rem;
             text-decoration: none;
-            color: #ebc89f;
+            color: #ebc89f; /*butten text*/
             transition: 0.3s ease all;
             overflow: hidden;
-            width: 500px;
+            width: 700px;
             position: relative;
             backdrop-filter: blur(1000px);
             font-family: Arial, sans-serif;
@@ -71,8 +70,8 @@
 
         /*the buttnes */
         .links a:hover {
-            background: rgb(220, 165, 105);
-            box-shadow: 5px 5px 0 rgb(208, 148, 44);
+            background: rgb(220, 165, 105); /*the buttnes hover */
+            box-shadow: 5px 5px 0 rgb(208, 148, 44);/*the buttnes hover shadow */
         }
 
         .links a:hover:before {
@@ -159,7 +158,7 @@
             content: '';
             position: absolute;
             width: 100px;
-            background-image: linear-gradient(180deg, rgb(237, 90, 41), rgb(100, 40, 9));
+            background-image: linear-gradient(180deg, #ed5a29, #ed5a29);
             height: 130%;
             animation: rotBGimg 3s linear infinite;
             transition: all 0.2s linear;
@@ -185,9 +184,10 @@
 
         .visit-count {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            background-color: rgba(238, 233, 233, 0.);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(238, 233, 233, 0);
             padding: 5px 10px;
             border-radius: 5px;
             font-size: 1.2rem;
