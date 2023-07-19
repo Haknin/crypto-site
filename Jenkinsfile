@@ -1,15 +1,32 @@
+def connectToServer(String ipAddress) {
+    script {
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-ori109', keyFileVariable: 'ssh-ori109')]) {
+            sshagent(['ssh-ori109']) {
+                sh """
+                ssh -o StrictHostKeyChecking=no -i ssh-ori109 ec2-user@$ipAddress '
+                sudo yum install docker -y
+                sudo systemctl restart docker
+                sudo docker-compose up -p 5000:5000 haknin/crypto_docker:latest
+                '
+                """
+            }
+        }
+    }
+}
+
 pipeline {
     agent any
-    triggers {
-        pollSCM('*/5 * * * *')
-    }
+
     environment {
-        EC2_IP = "18.198.202.101"
+        EC2_IP_TEST = "18.195.64.147"
+        EC2_IP_PROD = "18.195.215.121"
     }
     stages {
+
         stage('Cleanup') {
             steps {
                 cleanWs()
+                sh 'rm -rf *'
             }
         }
         stage('Clone') {
@@ -17,26 +34,101 @@ pipeline {
                 sh 'git clone https://github.com/Haknin/crypto-site.git'
             }
         }
-        stage('Build & Zip') {
+        stage('Login to Docker Hub') {
             steps {
-                script {
-                    sh 'tar czvf crypto.tar.gz crypto-site' // zip the code
+                withCredentials([
+                    usernamePassword(credentialsId: 'docker_login', usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')
+                ]) {
+                    sh "docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD"
                 }
             }
         }
-        stage('Upload to S3') {
+        stage('Build Docker Image') {
             steps {
-                sh 'aws s3 cp crypto.tar.gz s3://haknin-bucket/'
+                sh 'docker image prune -a -f'
+                sh 'docker container prune -f'
+                sh 'docker rmi \$(docker images -q) || true'
+                sh 'cd crypto-site && docker build --no-cache -t haknin/crypto_docker .'
             }
         }
-        stage('Setting Up The Test Server And Running Checks') {
+        stage('Push to Docker Hub') {
+            steps {
+                sh 'docker push haknin/crypto_docker:latest'
+            }
+        }
+        stage('Upload to TEST') {
             steps {
                 script {
-                    withCredentials([sshUserPrivateKey(credentialsId: 'ssh-ori109', keyFileVariable: 'KEY_FILE')]) {
-                        sh "scp -i /var/lib/jenkins/workspace/ori109.pem -o StrictHostKeyChecking=no crypto.tar.gz ec2-user@$EC2_IP:/home/ec2-user"
-                        sh "ssh -i /var/lib/jenkins/workspace/ori109.pem -o StrictHostKeyChecking=no ec2-user@$EC2_IP 'tar xzvf crypto.tar.gz'"
-                        sh "ssh -i /var/lib/jenkins/workspace/ori109.pem -o StrictHostKeyChecking=no ec2-user@$EC2_IP bash -x crypto-site/deploy.sh &"
+                    withCredentials([
+                        sshUserPrivateKey(credentialsId: 'ssh-ori109', keyFileVariable: 'ssh-ori109')
+                    ]) {
+                        sshagent(['ssh-ori109']) {
+                            sh """
+                            ssh -o StrictHostKeyChecking=no ec2-user@$EC2_IP_TEST '
+                            sudo yum install docker -y
+                            sudo yum install git -y
+                            cd crypto-site
+                            sudo docker-compose down
+                            sudo rm -fr crypto-site
+                            git clone https://github.com/Haknin/crypto-site.git
+                            sudo docker pull haknin/crypto_docker:latest
+                            sudo systemctl restart docker
+                            cd /home/ec2-user/crypto-site
+                            sudo curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-\$(uname -s)-\$(uname -m) -o /usr/local/bin/docker-compose
+                            cd /home/ec2-user/crypto-site
+                            sudo docker-compose up -d
+                            '
+                            """
+                        }
+                    }
+                }
+            }
+        }
+        stage('Test Site') {
+            steps {
+                script {
+                    withCredentials([
+                        sshUserPrivateKey(credentialsId: 'ssh-ori109', keyFileVariable: 'ssh-ori109')
+                    ]) {
+                        sshagent(['ssh-ori109']) {
+                            sh """
+                            ssh -o StrictHostKeyChecking=no ec2-user@$EC2_IP_TEST '
+                            cd /home/ec2-user/crypto-site
+                            pwd
+                            chmod +x test.sh
+                            ./test.sh
+                            '
+                            """
+                        }
+                    }
+                }
+            }
+        }
 
+        stage('Upload to PROD') {
+            steps {
+                script {
+                    withCredentials([
+                        sshUserPrivateKey(credentialsId: 'ssh-ori109', keyFileVariable: 'ssh-ori109')
+                    ]) {
+                        sshagent(['ssh-ori109']) {
+                            sh """
+                            ssh -o StrictHostKeyChecking=no ec2-user@$EC2_IP_PROD '
+                            sudo yum install docker -y
+                            sudo yum install git -y
+                            cd crypto-site
+                            sudo docker-compose down
+                            sudo rm -fr crypto-site
+                            git clone https://github.com/Haknin/crypto-site.git
+                            sudo docker pull haknin/crypto_docker:latest
+                            sudo systemctl restart docker
+                            cd /home/ec2-user/crypto-site
+                            sudo curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-\$(uname -s)-\$(uname -m) -o /usr/local/bin/docker-compose
+                            cd /home/ec2-user/crypto-site
+                            sudo docker-compose up -d
+                            '
+                            """
+                        }
                     }
                 }
             }
