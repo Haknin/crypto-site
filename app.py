@@ -7,7 +7,8 @@ app.secret_key = 'your_secret_key'  # Set a secret key for session encryption
 @app.route("/")
 def home_page():
     session['visits'] = session.get('visits', 0) + 1  # Increment page visit count
-    return render_template("HomePage.html")
+    count = session.get('visits', 0)  # Get the visit count
+    return render_template("HomePage.html", count=count)
 
 @app.route("/eth")
 def eth():
@@ -30,11 +31,6 @@ def btc():
 
     # Pass the Bitcoin price data to the template
     return render_template("btc.html", bitcoin_price=bitcoin_price)
-
-@app.route("/visit_count")
-def visit_count():
-    count = session.get('visits', 0)
-    return jsonify(count=count)
 
 if __name__ == '__main__':
     app.run()
