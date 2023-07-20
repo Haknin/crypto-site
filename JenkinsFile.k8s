@@ -43,7 +43,7 @@ pipeline {
         }
         stage('Testing') {
             steps {
-                sh 'kubectl apply -f /var/lib/jenkins/workspace/Pipeline-K8S/sample-flask-/Create-Cluster.yaml'
+                sh 'kubectl apply -f /var/lib/jenkins/workspace/Pipeline-kube/crypto-site/Create-Cluster.yaml'
             }
         }
     }
