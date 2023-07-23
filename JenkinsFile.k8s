@@ -1,49 +1,66 @@
 pipeline {
     agent any
-    triggers {
-        pollSCM('*/5 * * * *')
+    environment {
+        EC2_test_IP = null
+        EC2_prod_IP = null
+        externalIP = null
     }
     stages {
-        stage('Cleanup') {
+        stage('Clean and Clone git') {
             steps {
-                script {
-                    env.VM_IP = "35.158.239.52"
-                }
-                sh 'echo "Performing cleanup..."'
                 sh 'pwd'
                 sh 'rm -rf *'
-            }
-        }
-        stage('Clone') {
-            steps {
-                sh 'echo "Building..."'
                 sh 'git clone https://github.com/Haknin/crypto-site.git'
-                sh 'ls'
             }
         }
-         stage('Login to Docker Hub') {
+        stage('Build and Cleanup Container') {
             steps {
-                withCredentials([
-                    usernamePassword(credentialsId: 'docker_login', usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')
-                ]) {
-                    sh "docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD"
+                withCredentials([usernamePassword(credentialsId: 'docker_login', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh "docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}"
+                    sh 'echo "apply the script"'
+                    sh 'pwd'
+                    sh 'cd crypto-site && python3 pythonversioning.py'
                 }
             }
         }
-        stage('Upload to Docker Hub') {
+        stage('Testing Kubernetes') {
             steps {
-                sh '''
-                    pwd
-                    cd /var/lib/jenkins/workspace/pipe-kube/crypto-site/flask/
-                    python3 finddockerver.py
-                    cd /var/lib/jenkins/workspace/Pipeline-K8S/sample-flask-/Mysql
-                    python3 findsqlver.py
-                '''
+                script {
+                    sh 'gcloud container clusters get-credentials test-cluster --region=europe-central2'
+                    sh 'cd ci-cd && kubectl apply -f withredis.yaml'
+                }
             }
         }
-        stage('Testing') {
+        stage('Get External IP') {
             steps {
-                sh 'kubectl apply -f /var/lib/jenkins/workspace/Pipeline-kube/crypto-site/Create-Cluster.yaml'
+                script {
+                    sh 'sleep 30'
+                    sh 'kubectl get svc flask-app-service --no-headers | awk \'{print $4}\' > external_ip_qa.txt'
+                }
+            }
+        }
+        stage('Testing Q/A') {
+            steps {
+                script {
+                    sh '''
+                    externalIP=$(cat 'external_ip_qa.txt')
+                    curl_output=$(curl -s -o /dev/null -w "%{http_code}" http://${externalIP}:5000)
+                    if [ "$curl_output" -eq "200" ]; then
+                        echo "Site is working (200 OK)"
+                    else
+                        echo "Error: Site is not working"
+                        exit 1
+                    fi
+                    '''
+                }
+            }
+        }
+        stage('Running Kubernetes') {
+            steps {
+                script {
+                    sh 'gcloud container clusters get-credentials flask-cluster --region=europe-central2'
+                    sh 'cd ci-cd && kubectl apply -f withredis.yaml'
+                }
             }
         }
     }
