@@ -26,7 +26,7 @@ pipeline {
         stage('Testing Kubernetes') {
             steps {
                 script {
-                    sh 'gcloud container clusters get-credentials test-cluster --region=europe-central2'
+                    sh 'gcloud container clusters get-credentials autopilot-cluster-1 --region=us-central1'
                     sh 'cd ci-cd && kubectl apply -f withredis.yaml'
                 }
             }
