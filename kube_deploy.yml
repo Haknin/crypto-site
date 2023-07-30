@@ -10,6 +10,7 @@ spec:
     - protocol: TCP
       port: 5000
       targetPort: 5000
+      nodeport: 31300
   type: LoadBalancer
 ---
 apiVersion: apps/v1
@@ -31,3 +32,10 @@ spec:
           image: haknin/crypto_docker
           ports:
             - containerPort: 5000
+
+
+
+
+
+
+            
