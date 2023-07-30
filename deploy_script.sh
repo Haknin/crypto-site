@@ -1,6 +1,6 @@
 #!/bin/bash
 
-deployment_name="flask-app-service"
+deployment_name="flask-app-deployment"
 deployment_file="/var/lib/jenkins/workspace/pipe-kube/crypto-site/kube_deploy.yml"
 
 # Check if the deployment exists
