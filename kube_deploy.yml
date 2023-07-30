@@ -11,7 +11,7 @@ spec:
     - protocol: TCP
       port: 5000
       targetPort: 5000
-      nodePort: 30305
+      nodePort: 30300
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
         - name: flask-app-container
-          image: haknin/crypto_docker
+          image: haknin/crypto_docker:v1
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
