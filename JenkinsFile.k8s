@@ -1,66 +1,37 @@
 pipeline {
     agent any
-    environment {
-        EC2_test_IP = null
-        EC2_prod_IP = null
-        externalIP = null
-    }
     stages {
-        stage('Clean and Clone git') {
+        stage('Clean Up') {
             steps {
-                sh 'pwd'
-                sh 'rm -rf *'
-                sh 'git clone https://github.com/Haknin/crypto-site.git'
+                sh 'rm -rf *' // Clean up project files
+                sh 'git clone https://github.com/Haknin/crypto-site.git' // Clone Git repository to update the project
+                sh 'docker rmi -f haknin/crypto_docker:latest' // Delete previous Docker images
             }
         }
-        stage('Build and Cleanup Container') {
+        stage('Build And Push The Image To Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'docker_login', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh "docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}"
-                    sh 'echo "apply the script"'
-                    sh 'pwd'
-                    sh 'cd crypto-site && python3 pythonversioning.py'
+                dir('crypto-site') {
+                    sh "docker build -t haknin/crypto_docker:1.${BUILD_NUMBER} -t haknin/crypto_docker:latest ." // Create Docker image
                 }
+                sh "docker push haknin/crypto_docker:1.${BUILD_NUMBER}" // Push Docker image to Docker Hub
+                sh 'docker push haknin/crypto_docker:latest'
+                sh "docker image ls --format '{{.ID}}' haknin/crypto_docker --filter 'dangling=false' | sort -r | awk 'NR>4' | xargs -I {} docker image rm -f {}" // Cleanup old Docker images
             }
         }
-        stage('Testing Kubernetes') {
+        stage('Running Docker On Test Cluster') {
             steps {
-                script {
-                    sh 'gcloud container clusters get-credentials autopilot-cluster-1 --region=us-central1'
-                    sh 'cd ci-cd && kubectl apply -f withredis.yaml'
+                sh "kubectl config use-context gke_encoded-adviser-393206_us-central1-c_cluster-haknin"
+                dir('crypto-site') {
+                    sh "chmod +x deploy_script.sh"
+                    sh "./deploy_script.sh"
                 }
+                sh "kubectl set image deployment/flask-app-deployment flask-app-container=haknin/crypto_docker:1.${BUILD_NUMBER}"
             }
         }
-        stage('Get External IP') {
+        stage('Find your inner IP') {
             steps {
-                script {
-                    sh 'sleep 30'
-                    sh 'kubectl get svc flask-app-service --no-headers | awk \'{print $4}\' > external_ip_qa.txt'
-                }
-            }
-        }
-        stage('Testing Q/A') {
-            steps {
-                script {
-                    sh '''
-                    externalIP=$(cat 'external_ip_qa.txt')
-                    curl_output=$(curl -s -o /dev/null -w "%{http_code}" http://${externalIP}:5000)
-                    if [ "$curl_output" -eq "200" ]; then
-                        echo "Site is working (200 OK)"
-                    else
-                        echo "Error: Site is not working"
-                        exit 1
-                    fi
-                    '''
-                }
-            }
-        }
-        stage('Running Kubernetes') {
-            steps {
-                script {
-                    sh 'gcloud container clusters get-credentials flask-cluster --region=europe-central2'
-                    sh 'cd ci-cd && kubectl apply -f withredis.yaml'
-                }
+                sh 'chmod +x crypto-site/Load-Balancer-IP.sh'
+                sh 'bash crypto-site/Load-Balancer-IP.sh'
             }
         }
     }
