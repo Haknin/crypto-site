@@ -1,0 +1,35 @@
+pipeline {
+    agent any
+    stages {
+        stage('Clean Up') {
+            steps {
+                sh 'rm -rf *' // Clean up project files
+                sh 'git clone https://github.com/Haknin/crypto-site.git' // Clone Git repository to update the project
+                sh 'docker rmi -f haknin/crypto_docker:latest' // Delete previous Docker images
+            }
+        }
+        stage('Build And Push The Image To Docker Hub') {
+            steps {
+                dir('crypto-site') {
+                    sh "docker build -t haknin/crypto_docker:1.${BUILD_NUMBER} -t haknin/crypto_docker:latest ." // Create Docker image
+                }
+                sh "docker push haknin/crypto_docker:1.${BUILD_NUMBER}" // Push Docker image to Docker Hub
+                sh 'docker push haknin/crypto_docker:latest'
+                sh "docker image ls --format '{{.ID}}' haknin/crypto_docker --filter 'dangling=false' | sort -r | awk 'NR>4' | xargs -I {} docker image rm -f {}" // Cleanup old Docker images
+            }
+        }
+        stage('Deploy Using Helm') {
+            steps {
+                dir('crypto-site') {
+                    sh "helm upgrade --install myapp ./path/to/your/helm/chart --set image.tag=1.${BUILD_NUMBER}"
+                }
+            }
+        }
+        stage('Find your inner IP') {
+            steps {
+                sh 'chmod +x crypto-site/Load-Balancer-IP.sh'
+                sh 'bash crypto-site/Load-Balancer-IP.sh'
+            }
+        }
+    }
+}
