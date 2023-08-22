@@ -1,5 +1,6 @@
 pipeline {
     agent any
+
     stages {
         stage('Clean Up') {
             steps {
@@ -8,6 +9,7 @@ pipeline {
                 sh 'docker rmi -f haknin/crypto_docker:latest' // Delete previous Docker images
             }
         }
+
         stage('Build And Push The Image To Docker Hub') {
             steps {
                 dir('crypto-site') {
@@ -18,15 +20,16 @@ pipeline {
                 sh "docker image ls --format '{{.ID}}' haknin/crypto_docker --filter 'dangling=false' | sort -r | awk 'NR>4' | xargs -I {} docker image rm -f {}" // Cleanup old Docker images
             }
         }
+
         stage('Deploy Using Helm') {
             steps {
-            dir('crypto-site') {
-                sh "gsutil cp gs://bucket-haknin/helm-project-0.1.12.tgz helm.tgz" // Download Helm chart from GCP bucket
-                sh "tar -xzvf helm.tgz" // Extract the Helm chart
-                sh "helm upgrade --install myapp .crypto-site/helm/crypto_flask_haknin --set image.tag=1.${BUILD_NUMBER}" // Deploy using Helm
+                dir('crypto-site') {
+                    sh "gsutil cp gs://bucket-haknin/helm-project-0.1.12.tgz helm.tgz" // Download Helm chart from GCP bucket
+                    sh "tar -xzvf helm.tgz" // Extract the Helm chart
+                    sh "helm upgrade --install myapp flaskapp/ --set image.tag=1.${BUILD_NUMBER}" // Deploy using Helm
+                }
             }
         }
-    }
 
         stage('Find your inner IP') {
             steps {
