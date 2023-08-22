@@ -83,43 +83,84 @@ pipeline {
             }
         }
 
-        stage('Deploy Kubernetes Resources') {
-            steps {
-                script {
-                    deployKubernetesResources()
-                }
-            }
-        }
-
         stage('Apply Kubernetes Manifests on test server') {
             steps {
-                script {
-                    performKubernetesApply("cluster-test")
-                }
+                echo "Applying Kubernetes manifests..."
+
+                // Call the function to perform Kubernetes apply
+                performKubernetesApply("cluster-test")
+
+                // Wait until the deployment and service are ready
+                sh """
+                echo \"Waiting for deployment and service to be ready on autopilot-cluster-1...\"
+                kubectl rollout status deployment/flask-app-deployment
+                kubectl wait --for=condition=ready pod -l app=flask-app
+                kubectl wait --for=condition=available deployment/flask-app-deployment
+                """
+                sh "sleep 45"
             }
         }
 
         stage('Test Website') {
             steps {
+                // Test the website on the IP provided by Kubernetes service
                 echo "Testing website..."
-                // Add your website testing steps here
-                // ...
+                sh """
+                CLUSTER_IP=\$(kubectl get service flask-app-service -o=jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                # Check if CLUSTER_IP is empty, if it is, exit the script
+                if [ -z "\$CLUSTER_IP" ]; then
+                    echo \"Error: LoadBalancer IP not found. Exiting...\"
+                    exit 1
+                fi
+
+                status_code=\$(curl -sL -w \"%{http_code}\" \"http://\$CLUSTER_IP:5000\" -o /dev/null)
+                if [ \$status_code -eq 200 ]; then
+                    echo \"Website is working fine\"
+                else
+                    echo \"Website is not responding with 200 OK\"
+                fi
+                """
             }
         }
 
         stage('Cleanup Kubernetes Resources on test server') {
             steps {
+                // Delete Kubernetes resources
                 sh """
                 helm uninstall my-gcs-repo
                 """
             }
         }
 
+        // New stage to apply Kubernetes manifests on autopilot-cluster-2
         stage('Apply Kubernetes Manifests on autopilot-cluster-2') {
             steps {
-                script {
-                    performKubernetesApply("cluster-1")
-                }
+                echo "Applying Kubernetes manifests on autopilot-cluster-2..."
+
+                // Call the function to perform Kubernetes apply for autopilot-cluster-2
+                performKubernetesApply("cluster-1")
+
+                // Wait until all pods are in the "Running" state
+                sh """
+                echo \"Waiting for all pods to be running on autopilot-cluster-2...\"
+                kubectl wait --for=condition=ready pod -l app=flask-app -n default
+                kubectl wait --for=condition=ready pod -l app=redis-db -n default
+                """
+                
+                // Get Load Balancer IP
+                sh """
+                sleep 20
+                CLUSTER_IP=\$(kubectl get service flask-app-service -o=jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                # Check if CLUSTER_IP is empty, if it is, exit the script
+                if [ -z "\$CLUSTER_IP" ]; then
+                    echo \"Error: LoadBalancer IP not found. Exiting...\"
+                    exit 1
+                fi
+            
+
+                echo \"Load Balancer IP: \$CLUSTER_IP\"
+                echo \"Website is running\"
+                """
             }
         }
     }
