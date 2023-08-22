@@ -1,64 +1,59 @@
-def performKubernetesApply(clusterName) {
-    // Apply Helm chart deployment
-    sh """
-    gcloud container clusters get-credentials \${clusterName} --project YOUR_PROJECT_ID --region YOUR_REGION
-    helm repo add my-flask-app gs://bucket-haknin/
-    helm repo update
-    pwd
-    cd /var/lib/jenkins/workspace/helm-pipe/crypto-site
-    pwd
-    chmod +x helmstatus.sh
-    ./helmstatus.sh
-    """
-    
-    // Sleep for a few seconds to allow the application to start
-    sleep 20
-}
-
 pipeline {
     agent any
 
     stages {
         stage('Cleanup') {
             steps {
-                // Clean up any previous Docker images and containers
-                sh """
-                docker rmi -f haknin/crypto_docker:latest
-                """
+                // Add cleanup steps here
             }
         }
 
         stage('Build And Push The Image To Docker Hub') {
             steps {
                 script {
-                    // Build Docker image and push to Docker Hub
-                    sh """
-                    docker build -t haknin/crypto_docker:1.10 -t haknin/crypto_docker:latest .
-                    docker push haknin/crypto_docker:1.10
-                    docker push haknin/crypto_docker:latest
-                    """
+                    // Add your Docker build and push steps here
                 }
             }
         }
 
         stage('Deploy Using Helm') {
             steps {
-                // Copy Helm chart from GCS bucket and deploy
-                sh """
-                gsutil cp gs://bucket-haknin/helm-project-0.1.12.tgz helm.tgz
-                tar -xzvf helm.tgz
-                helm upgrade --install myapp .crypto-site/helm/crypto_flask_haknin --set image.tag=1.10
-                """
+                script {
+                    // Copy the Helm chart from GCS bucket
+                    sh "gsutil cp gs://bucket-haknin/helm-project-0.1.12.tgz helm.tgz"
+                    sh "tar -xzvf helm.tgz"
+
+                    // Upgrade or install Helm release
+                    def releaseName = "myapp"
+                    def chartPath = "crypto-site/helm/crypto_flask_haknin" // Update this path
+                    sh "helm repo update"
+                    def releaseStatus = sh(
+                        script: "helm status $releaseName",
+                        returnStatus: true
+                    ).trim()
+                    if (releaseStatus == 0) {
+                        echo "Helm release '$releaseName' already exists. Upgrading..."
+                        sh "helm upgrade $releaseName $chartPath --set image.tag=1.10"
+                    } else {
+                        echo "Helm release '$releaseName' doesn't exist. Installing..."
+                        sh "helm install $releaseName $chartPath --set image.tag=1.10"
+                    }
+                }
             }
         }
 
         stage('Test Website') {
             steps {
-                // Test the deployed website
-                sh """
-                # Perform testing here
-                """
+                // Add website testing steps here
             }
         }
+
+        stage('Cleanup Kubernetes Resources') {
+            steps {
+                // Add cleanup of Kubernetes resources here
+            }
+        }
+
+        // Add more stages as needed
     }
 }
