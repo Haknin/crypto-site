@@ -1,59 +1,126 @@
+def deployKubernetesResources() {
+    def releaseName = "my-gcs-repo"
+    dir('flask/bitcoinproject') {
+        sh "helm repo update"
+        // Check if the Helm release already exists
+        def releaseStatus = sh(
+            script: "helm status $releaseName",
+            returnStatus: true
+        ).trim()
+        if (releaseStatus == 0) {
+            echo "Helm release '$releaseName' already exists. Upgrading..."
+            sh "helm upgrade $releaseName my-flask-app/"
+        } else {
+            echo "Helm release '$releaseName' doesn't exist. Installing..."
+            sh "helm install $releaseName my-flask-app/"
+        }
+    }
+}
+
+def performKubernetesApply(clusterName) {
+    // Apply Flask app deployment
+    sh """
+    gcloud container clusters get-credentials ${clusterName} --project cool-evening-393307 --region europe-central2-a
+    helm repo add my-flask-app gs://helmoryaeer/
+    helm repo update
+    pwd
+    cd /var/lib/jenkins/workspace/Helm_Pipeline/bitcoinproject/scripts/
+    pwd
+    chmod +x helmstatus.sh
+    ./helmstatus.sh
+    """
+    
+    // Sleep for a few seconds to allow the application to start
+    sleep 20
+}
+
 pipeline {
     agent any
 
     stages {
         stage('Cleanup') {
             steps {
-                // Add cleanup steps here
+                withCredentials([usernamePassword(credentialsId: 'oryaeer-credentials', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
+                    echo "Switching to oryaeer user and performing cleanup..."
+                    sh """
+                    echo $PASSWORD | sudo -S -u oryaeer bash -c '
+                        whoami
+                        docker rmi -f oryaeer/flaskapp:new
+                        docker image ls --format '{{.ID}}' oryaeer/flaskapp --filter 'dangling=false' | sort -r | awk 'NR>3' | xargs -I {} docker image rm -f {}
+                        pwd
+                        whoami
+                    '
+                    """
+                    sh """
+                    pwd
+                    """
+                }
             }
         }
 
         stage('Build And Push The Image To Docker Hub') {
             steps {
                 script {
-                    // Add your Docker build and push steps here
+                    withCredentials([usernamePassword(credentialsId: 'oryaeer-credentials', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
+                        // Switch to oryaeer user and execute Docker build and push commands
+                        sh """
+                        echo \$PASSWORD | sudo -S -u oryaeer bash -c '
+                            cd /home/oryaeer/Desktop/flask/bitcoinproject
+                            git pull
+                            chmod +x /home/oryaeer/Desktop/flask/bitcoinproject/scripts/cleanbucket.sh
+                            ./scripts/cleanbucket
+                            pwd
+                            docker build --tag oryaeer/flaskapp:5.${BUILD_NUMBER} -t oryaeer/flaskapp:new .
+                            docker push oryaeer/flaskapp:new
+                            docker push oryaeer/flaskapp:5.${BUILD_NUMBER}
+                            chmod +x /home/oryaeer/Desktop/flask/bitcoinproject/scripts/helm-version.sh
+                            ./scripts/helm-version.sh
+                        
+                        '
+                        """
+                    }
                 }
             }
         }
 
-        stage('Deploy Using Helm') {
+        stage('Deploy Kubernetes Resources') {
             steps {
                 script {
-                    // Copy the Helm chart from GCS bucket
-                    sh "gsutil cp gs://bucket-haknin/helm-project-0.1.12.tgz helm.tgz"
-                    sh "tar -xzvf helm.tgz"
+                    deployKubernetesResources()
+                }
+            }
+        }
 
-                    // Upgrade or install Helm release
-                    def releaseName = "myapp"
-                    def chartPath = "crypto-site/helm/crypto_flask_haknin" // Update this path
-                    sh "helm repo update"
-                    def releaseStatus = sh(
-                        script: "helm status $releaseName",
-                        returnStatus: true
-                    ).trim()
-                    if (releaseStatus == 0) {
-                        echo "Helm release '$releaseName' already exists. Upgrading..."
-                        sh "helm upgrade $releaseName $chartPath --set image.tag=1.10"
-                    } else {
-                        echo "Helm release '$releaseName' doesn't exist. Installing..."
-                        sh "helm install $releaseName $chartPath --set image.tag=1.10"
-                    }
+        stage('Apply Kubernetes Manifests on test server') {
+            steps {
+                script {
+                    performKubernetesApply("cluster-test")
                 }
             }
         }
 
         stage('Test Website') {
             steps {
-                // Add website testing steps here
+                echo "Testing website..."
+                // Add your website testing steps here
+                // ...
             }
         }
 
-        stage('Cleanup Kubernetes Resources') {
+        stage('Cleanup Kubernetes Resources on test server') {
             steps {
-                // Add cleanup of Kubernetes resources here
+                sh """
+                helm uninstall my-gcs-repo
+                """
             }
         }
 
-        // Add more stages as needed
+        stage('Apply Kubernetes Manifests on autopilot-cluster-2') {
+            steps {
+                script {
+                    performKubernetesApply("cluster-1")
+                }
+            }
+        }
     }
 }
