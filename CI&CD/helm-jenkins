@@ -20,16 +20,14 @@ pipeline {
         }
         stage('Deploy Using Helm') {
             steps {
-                dir('crypto-site') {
-                    sh "gsutil ls gs://bucket-haknin" // Debug: List files in the bucket to verify the path
-                    sh "gsutil cp gs://bucket-haknin/helm-project-${BUILD_NUMBER}.tgz helm.tgz" // Download Helm chart from GCP bucket
-                    sh "ls -l" // Debug: List files in the directory to verify the Helm chart is present
-                    sh "tar -xzvf helm.tgz" // Extract the Helm chart
-                    sh "ls -l .crypto-site/helm" // Debug: List files in the extracted Helm chart directory
-                    sh "helm upgrade --install myapp .crypto-site/helm/crypto_flask_haknin --set image.tag=1.${BUILD_NUMBER}" // Deploy using Helm
-                }
+            dir('crypto-site') {
+                sh "gsutil cp gs://bucket-haknin/helm-project-0.1.12.tgz helm.tgz" // Download Helm chart from GCP bucket
+                sh "tar -xzvf helm.tgz" // Extract the Helm chart
+                sh "helm upgrade --install myapp .crypto-site/helm/crypto_flask_haknin --set image.tag=1.${BUILD_NUMBER}" // Deploy using Helm
             }
         }
+    }
+
         stage('Find your inner IP') {
             steps {
                 sh 'chmod +x crypto-site/Load-Balancer-IP.sh'
