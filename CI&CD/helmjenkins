@@ -1,30 +1,11 @@
-def deployKubernetesResources() {
-    def releaseName = "my-gcs-repo"
-    dir('flask/bitcoinproject') {
-        sh "helm repo update"
-        // Check if the Helm release already exists
-        def releaseStatus = sh(
-            script: "helm status $releaseName",
-            returnStatus: true
-        ).trim()
-        if (releaseStatus == 0) {
-            echo "Helm release '$releaseName' already exists. Upgrading..."
-            sh "helm upgrade $releaseName my-flask-app/"
-        } else {
-            echo "Helm release '$releaseName' doesn't exist. Installing..."
-            sh "helm install $releaseName my-flask-app/"
-        }
-    }
-}
-
 def performKubernetesApply(clusterName) {
     // Apply Flask app deployment
     sh """
-    gcloud container clusters get-credentials ${clusterName} --project cool-evening-393307 --region europe-central2-a
-    helm repo add my-flask-app gs://helmoryaeer/
+    gcloud container clusters get-credentials ${clusterName} --project encoded-adviser-393206 --region us-central1-c
+    helm repo add my-flask-app gs://bucket-haknin/
     helm repo update
     pwd
-    cd /var/lib/jenkins/workspace/Helm_Pipeline/bitcoinproject/scripts/
+    cd /var/lib/jenkins/workspace/helm-pipe/crypto-site
     pwd
     chmod +x helmstatus.sh
     ./helmstatus.sh
@@ -34,27 +15,18 @@ def performKubernetesApply(clusterName) {
     sleep 20
 }
 
+
+
 pipeline {
     agent any
 
     stages {
         stage('Cleanup') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'oryaeer-credentials', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
-                    echo "Switching to oryaeer user and performing cleanup..."
-                    sh """
-                    echo $PASSWORD | sudo -S -u oryaeer bash -c '
-                        whoami
-                        docker rmi -f oryaeer/flaskapp:new
-                        docker image ls --format '{{.ID}}' oryaeer/flaskapp --filter 'dangling=false' | sort -r | awk 'NR>3' | xargs -I {} docker image rm -f {}
-                        pwd
-                        whoami
-                    '
-                    """
-                    sh """
-                    pwd
-                    """
-                }
+                // Clean up any previous Docker images and containers
+                sh """
+                docker rmi -f haknin/crypto_docker:latest
+                """
             }
         }
 
@@ -64,102 +36,33 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'oryaeer-credentials', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
                         // Switch to oryaeer user and execute Docker build and push commands
                         sh """
-                        echo \$PASSWORD | sudo -S -u oryaeer bash -c '
-                            cd /home/oryaeer/Desktop/flask/bitcoinproject
-                            git pull
-                            chmod +x /home/oryaeer/Desktop/flask/bitcoinproject/scripts/cleanbucket.sh
-                            ./scripts/cleanbucket
-                            pwd
-                            docker build --tag oryaeer/flaskapp:5.${BUILD_NUMBER} -t oryaeer/flaskapp:new .
-                            docker push oryaeer/flaskapp:new
-                            docker push oryaeer/flaskapp:5.${BUILD_NUMBER}
-                            chmod +x /home/oryaeer/Desktop/flask/bitcoinproject/scripts/helm-version.sh
+                            docker push haknin/crypto_docker:1.${BUILD_NUMBER}" // Push Docker image to Docker Hub
+                            docker push haknin/crypto_docker:latest'
+                            docker image ls --format '{{.ID}}' haknin/crypto_docker --filter 'dangling=false' | sort -r | awk 'NR>4' | xargs -I {} docker image rm -f {}" // Cleanup old Docker images
+                            chmod +x crypto-site/helm/helmstatus.sh
                             ./scripts/helm-version.sh
-                        
-                        '
                         """
                     }
                 }
             }
         }
 
-        stage('Apply Kubernetes Manifests on test server') {
+        stage('Deploy Using Helm') {
             steps {
-                echo "Applying Kubernetes manifests..."
-
-                // Call the function to perform Kubernetes apply
-                performKubernetesApply("cluster-test")
-
-                // Wait until the deployment and service are ready
+                // Copy Helm chart from GCS bucket and deploy
                 sh """
-                echo \"Waiting for deployment and service to be ready on autopilot-cluster-1...\"
-                kubectl rollout status deployment/flask-app-deployment
-                kubectl wait --for=condition=ready pod -l app=flask-app
-                kubectl wait --for=condition=available deployment/flask-app-deployment
+                gsutil cp gs://bucket-haknin/helm-project-${BUILD_NUMBER}.tgz helm.tgz
+                tar -xzvf helm.tgz
+                helm upgrade --install myapp .crypto-site/helm/crypto_flask_haknin --set image.tag=1.10
                 """
-                sh "sleep 45"
             }
         }
 
         stage('Test Website') {
             steps {
-                // Test the website on the IP provided by Kubernetes service
-                echo "Testing website..."
+                // Test the deployed website
                 sh """
-                CLUSTER_IP=\$(kubectl get service flask-app-service -o=jsonpath='{.status.loadBalancer.ingress[0].ip}')
-                # Check if CLUSTER_IP is empty, if it is, exit the script
-                if [ -z "\$CLUSTER_IP" ]; then
-                    echo \"Error: LoadBalancer IP not found. Exiting...\"
-                    exit 1
-                fi
-
-                status_code=\$(curl -sL -w \"%{http_code}\" \"http://\$CLUSTER_IP:5000\" -o /dev/null)
-                if [ \$status_code -eq 200 ]; then
-                    echo \"Website is working fine\"
-                else
-                    echo \"Website is not responding with 200 OK\"
-                fi
-                """
-            }
-        }
-
-        stage('Cleanup Kubernetes Resources on test server') {
-            steps {
-                // Delete Kubernetes resources
-                sh """
-                helm uninstall my-gcs-repo
-                """
-            }
-        }
-
-        // New stage to apply Kubernetes manifests on autopilot-cluster-2
-        stage('Apply Kubernetes Manifests on autopilot-cluster-2') {
-            steps {
-                echo "Applying Kubernetes manifests on autopilot-cluster-2..."
-
-                // Call the function to perform Kubernetes apply for autopilot-cluster-2
-                performKubernetesApply("cluster-1")
-
-                // Wait until all pods are in the "Running" state
-                sh """
-                echo \"Waiting for all pods to be running on autopilot-cluster-2...\"
-                kubectl wait --for=condition=ready pod -l app=flask-app -n default
-                kubectl wait --for=condition=ready pod -l app=redis-db -n default
-                """
-                
-                // Get Load Balancer IP
-                sh """
-                sleep 20
-                CLUSTER_IP=\$(kubectl get service flask-app-service -o=jsonpath='{.status.loadBalancer.ingress[0].ip}')
-                # Check if CLUSTER_IP is empty, if it is, exit the script
-                if [ -z "\$CLUSTER_IP" ]; then
-                    echo \"Error: LoadBalancer IP not found. Exiting...\"
-                    exit 1
-                fi
-            
-
-                echo \"Load Balancer IP: \$CLUSTER_IP\"
-                echo \"Website is running\"
+                # Perform testing here
                 """
             }
         }
