@@ -27,7 +27,7 @@ pipeline {
             }
         }
         
-       stage('Build And Push The Image To Docker Hub') {
+        stage('Build And Push The Image To Docker Hub') {
             steps {
                 script {
                     docker push "haknin/crypto_docker:1.${BUILD_NUMBER}"  // Push Docker image to Docker Hub
