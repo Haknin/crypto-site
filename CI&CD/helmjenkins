@@ -30,7 +30,7 @@ pipeline {
         stage('Build And Push The Image To Docker Hub') {
             steps {
                 script {
-                    docker push "haknin/crypto_docker:1.${BUILD_NUMBER}"  // Push Docker image to Docker Hub
+                    docker push haknin/crypto_docker:1.${BUILD_NUMBER}  // Push Docker image to Docker Hub
                     docker push haknin/crypto_docker:latest
                     docker image ls --format '{{.ID}}' haknin/crypto_docker --filter 'dangling=false' | sort -r | awk 'NR>4' | xargs -I {} docker image rm -f {}  // Cleanup old Docker images
                     chmod +x crypto-site/helm/helmstatus.sh
@@ -38,7 +38,7 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Deploy Using Helm') {
             steps {
                 // Copy Helm chart from GCS bucket and deploy
