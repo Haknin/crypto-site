@@ -15,8 +15,11 @@ def performKubernetesApply(clusterName) {
     sleep 20
 }
 
+
+
 pipeline {
     agent any
+
     stages {
         stage('Cleanup') {
             steps {
@@ -26,19 +29,24 @@ pipeline {
                 """
             }
         }
-        
+
         stage('Build And Push The Image To Docker Hub') {
             steps {
                 script {
-                    docker push haknin/crypto_docker:1.${BUILD_NUMBER}  // Push Docker image to Docker Hub
-                    docker push haknin/crypto_docker:latest
-                    docker image ls --format '{{.ID}}' haknin/crypto_docker --filter 'dangling=false' | sort -r | awk 'NR>4' | xargs -I {} docker image rm -f {}  // Cleanup old Docker images
-                    chmod +x crypto-site/helm/helmstatus.sh
-                    ./scripts/helm-version.sh
+                    withCredentials([usernamePassword(credentialsId: 'oryaeer-credentials', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
+                        // Switch to oryaeer user and execute Docker build and push commands
+                        sh """
+                            docker push haknin/crypto_docker:1.${BUILD_NUMBER}" // Push Docker image to Docker Hub
+                            docker push haknin/crypto_docker:latest'
+                            docker image ls --format '{{.ID}}' haknin/crypto_docker --filter 'dangling=false' | sort -r | awk 'NR>4' | xargs -I {} docker image rm -f {}" // Cleanup old Docker images
+                            chmod +x crypto-site/helm/helmstatus.sh
+                            ./scripts/helm-version.sh
+                        """
+                    }
                 }
             }
         }
-        
+
         stage('Deploy Using Helm') {
             steps {
                 // Copy Helm chart from GCS bucket and deploy
@@ -49,7 +57,7 @@ pipeline {
                 """
             }
         }
-        
+
         stage('Test Website') {
             steps {
                 // Test the deployed website
