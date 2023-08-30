@@ -194,6 +194,54 @@
             color: #ebc89f;
             z-index: 2; /* Added z-index to make it appear on top */
         }
+        .social {
+  position: fixed;
+  top: 50px;
+  font-family: Gill Sans, sans-serif;
+}
+.social ul {
+  padding: 0px;
+  transform: translate(-270px, 0);
+}
+.social ul li {
+  display: block;
+  margin: 5px;
+  backdrop-filter: blur(25px) saturate(200%);
+  -webkit-backdrop-filter: blur(25px) saturate(200%);
+  background-color: #1E4343;
+  width: 300px;
+  text-align: right;
+  padding: 10px;
+  border-radius: 0 30px 30px 0;
+  transition: all 1s;
+}
+.social ul li:hover {
+  transform: translate(110px, 0);
+  backdrop-filter: blur(25px) saturate(200%);
+  -webkit-backdrop-filter: blur(25px) saturate(200%);
+  background-color: #302f2fd7;
+}
+.social ul li:hover a {
+  color: #ffffff;
+}
+.social ul li:hover i {
+  color: #fff;
+  background: #1E4343;
+  transform: rotate(360deg);
+  transition: all 1s;
+}
+.social ul li i {
+  margin-left: 10px;
+  color: #000;
+  background: #fff;
+  padding: 10px;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  background: #ffffff;
+  transform: rotate(0deg);
+}
     </style>
 </head>
 
@@ -201,8 +249,8 @@
     <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
 <nav class="social">
     <ul> 
-        <li><a href="https://github.com/Roy-Latin/DevOps-Crypto">Github <i class="fa fa-github"></i></a></li>
-        <li><a href="https://www.linkedin.com/in/roy-latin-665216278/">Linkedin <i class="fa fa-linkedin"></i></a></li>
+        <li><a href="https://github.com/Haknin/crypto-site.git">Github <i class="fa fa-github"></i></a></li>
+        <li><a href="www.linkedin.com/in/ori-haknin">Linkedin <i class="fa fa-linkedin"></i></a></li>
           </ul>
     </nav>
     <div class="container">

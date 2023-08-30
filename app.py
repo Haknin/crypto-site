@@ -1,7 +1,8 @@
 from flask import Flask, render_template, session, jsonify
 import requests
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static')
+
 app.secret_key = 'your_secret_key'  # Set a secret key for session encryption
 
 @app.route("/")
