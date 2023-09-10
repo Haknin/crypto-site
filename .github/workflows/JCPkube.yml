@@ -21,6 +21,19 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Build and Cleanup Container
+        run: |
+          pip install docker
+          echo "apply the script"
+          cd ci-cd/alpacaflask
+          python3 pythonversioning.py
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0.2.0
+        with:
+          project_id: ${{ secrets.gcp_project }}
+          service_account_key: ${{ secrets.gcp_credentials }}
+          export_default_credentials: true
+
       - name: Build And Push The Image To Docker Hub
         working-directory: crypto-site
         run: |
