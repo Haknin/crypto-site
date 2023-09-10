@@ -1,5 +1,5 @@
 name: CI/CD Pipeline
-    
+
 on:
   push:
     branches:
@@ -21,22 +21,22 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build And Push The Image To Docker Hub
-      working-directory: crypto-site
-      run: |
-        docker build -t haknin/crypto_docker:1.${{ github.run_number }} -t haknin/crypto_docker:latest .
-        docker push haknin/crypto_docker:1.${{ github.run_number }}
-        docker push haknin/crypto_docker:latest
-        docker image ls --format '{{.ID}}' haknin/crypto_docker --filter 'dangling=false' | sort -r | awk 'NR>4' | xargs -I {} docker image rm -f {}
+      - name: Build And Push The Image To Docker Hub
+        working-directory: crypto-site
+        run: |
+          docker build -t haknin/crypto_docker:1.${{ github.run_number }} -t haknin/crypto_docker:latest .
+          docker push haknin/crypto_docker:1.${{ github.run_number }}
+          docker push haknin/crypto_docker:latest
+          docker image ls --format '{{.ID}}' haknin/crypto_docker --filter 'dangling=false' | sort -r | awk 'NR>4' | xargs -I {} docker image rm -f {}
 
-    - name: Deploy Using Helm
-      working-directory: crypto-site
-      run: |
-        gsutil cp gs://bucket-haknin/helm-project-0.1.9.tgz helm.tgz
-        tar -xzvf helm.tgz
-        helm upgrade --install myapp flaskapp/ --set image.tag=1.${{ github.run_number }}
+      - name: Deploy Using Helm
+        working-directory: crypto-site
+        run: |
+          gsutil cp gs://bucket-haknin/helm-project-0.1.9.tgz helm.tgz
+          tar -xzvf helm.tgz
+          helm upgrade --install myapp flaskapp/ --set image.tag=1.${{ github.run_number }}
 
-    - name: Find your inner IP
-      run: |
-        chmod +x crypto-site/Load-Balancer-IP.sh
-        bash crypto-site/Load-Balancer-IP.sh
+      - name: Find your inner IP
+        run: |
+          chmod +x crypto-site/Load-Balancer-IP.sh
+          bash crypto-site/Load-Balancer-IP.sh
