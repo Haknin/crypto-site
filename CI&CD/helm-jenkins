@@ -24,7 +24,7 @@ pipeline {
         stage('Deploy Using Helm') {
             steps {
                 dir('crypto-site') {
-                    sh "gsutil cp gs://bucket-haknin/helm-project-0.1.19.tgz helm.tgz" // Download Helm chart from GCP bucket
+                    sh "gsutil cp gs://bucket-haknin/helm-project-0.1.9.tgz  helm.tgz" // Download Helm chart from GCP bucket
                     sh "tar -xzvf helm.tgz" // Extract the Helm chart
                     sh "helm upgrade --install myapp flaskapp/ --set image.tag=1.${BUILD_NUMBER}" // Deploy using Helm
                 }
