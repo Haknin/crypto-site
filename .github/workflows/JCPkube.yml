@@ -25,7 +25,7 @@ jobs:
         run: |
           pip install docker
           echo "apply the script"
-          cd ci-cd/alpacaflask
+          cd crypto-site/
           python3 pythonversioning.py
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v0.2.0
