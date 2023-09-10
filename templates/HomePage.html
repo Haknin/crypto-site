@@ -3,13 +3,13 @@
 <head>
     <style>
         body {
+            background-image: url('https://media.giphy.com/media/indJrPEycgAqmKRNR7/giphy-downsized-large.gif');
             background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
+            background-position: middle;
             overflow: hidden;
             margin: 0;
             padding: 0;
-            color: rgb(61, 5, 246);
+            color: white;
         }
 
         .links {
@@ -277,25 +277,6 @@
         </div>
     </div>
 
-<script>
-  var backgroundImages = [
-  'https://media.giphy.com/media/l2JId7k65ID69VE6A/giphy.gif'
-  ];
- 
-  var currentImageIndex = 0;
-
-  function changeBackgroundImage() {
-    document.body.style.backgroundImage = 'url("' + backgroundImages[currentImageIndex] + '")';
-    if (currentImageIndex === backgroundImages.length - 1) {
-      // If it's the last image, set the background image to the second image and stop changing
-      document.body.style.backgroundImage = 'url("' + backgroundImages[1] + '")';
-      return;
-    }
-    currentImageIndex = (currentImageIndex + 1) % backgroundImages.length;
-  }
-
-  // Call the function to change the background image initially
-  changeBackgroundImage();
 </script>
 </body>
 </html>
