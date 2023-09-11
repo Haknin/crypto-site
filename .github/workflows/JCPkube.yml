@@ -45,7 +45,7 @@ jobs:
       - name: Deploy Using Helm
         working-directory: crypto-site
         run: |
-          cat ${{ github.run_number }}
+          echo ${{ github.run_number }}
           gsutil cp gs://bucket-haknin/helm-project-0.1.9.tgz helm.tgz 
           tar -xzvf helm.tgz 
           gcloud container clusters get-credentials cluster-1093 --region=us-central-1
