@@ -45,8 +45,8 @@ jobs:
       - name: Deploy Using Helm
         working-directory: crypto-site
         run: |
-          gsutil cp gs://bucket-haknin/helm-project-0.1.9.tgz helm.tgz
-          tar -xzvf helm.tgz
+          gsutil cp gs://bucket-haknin/helm-project-0.1.9.tgz helm.tgz ;
+          tar -xzvf helm.tgz ;
           helm upgrade --install myapp flaskapp/ --set image.tag=1.${{ github.run_number }}
 
       - name: Find your inner IP
