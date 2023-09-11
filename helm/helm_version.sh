@@ -1,6 +1,6 @@
 #!/bin/bash
 # Navigate to the chart directory
-cd /var/lib/jenkins/workspace/helm-pipe/crypto-site/helm/crypto_flask_haknin/
+cd crypto-site/helm/crypto_flask_haknin/
 
 # Extract the current version from Chart.yaml
 VERSION=$(grep "version:" Chart.yaml | cut -d ' ' -f 2)
